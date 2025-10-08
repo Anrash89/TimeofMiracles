@@ -14,25 +14,30 @@
       --muted:#6b6b6b;
       --ok:#27ae60;
       --err:#e74c3c;
-      --ring: 0 8px 40px rgba(122, 92, 255, .15);
+      --ring: 0 8px 40px rgba(122,92,255,.15);
     }
     *{box-sizing:border-box}
-    html,body{margin:0;padding:0;background:radial-gradient(1200px 600px at 10% -10%, #ffe8f6 0, transparent 60%), radial-gradient(1000px 800px at 110% 10%, #e7e2ff 0, transparent 60%), var(--bg); color:var(--ink); font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial; }
+    html,body{
+      margin:0;padding:0;
+      background:radial-gradient(1200px 600px at 10% -10%, #ffe8f6 0, transparent 60%),
+                 radial-gradient(1000px 800px at 110% 10%, #e7e2ff 0, transparent 60%),
+                 var(--bg);
+      color:var(--ink);
+      font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial;
+    }
     .wrap{max-width:900px;margin:40px auto;padding:16px}
     .card{
       background:var(--card);
       border-radius:20px;
       box-shadow:var(--ring);
       padding:24px 22px;
-      position:relative;
-      overflow:hidden;
+      position:relative;overflow:hidden;
     }
     .halo{
-      position:absolute; inset:-60px -80px auto auto; width:260px; height:260px; 
+      position:absolute; inset:-60px -80px auto auto; width:260px; height:260px;
       background: conic-gradient(from 0deg, #ffd2ef, #d6c8ff, #ffd2ef);
       filter: blur(40px) saturate(120%);
-      opacity:.25; border-radius:50%;
-      pointer-events:none;
+      opacity:.25; border-radius:50%; pointer-events:none;
     }
     h1{
       margin:0 0 6px; font-size:28px; letter-spacing:.2px;
@@ -44,7 +49,10 @@
     }
     p.lead{margin:0 0 20px;color:var(--muted)}
     .grid{display:grid; gap:14px}
-    @media (min-width:720px){ .grid-2{ grid-template-columns:1fr 1fr; } .grid-3{ grid-template-columns:1fr 1fr 1fr; } }
+    @media (min-width:720px){
+      .grid-2{ grid-template-columns:1fr 1fr; }
+      .grid-3{ grid-template-columns:1fr 1fr 1fr; }
+    }
     label{font-weight:600; font-size:14px; margin-bottom:6px; display:block}
     .hint{font-size:12px;color:var(--muted);margin-top:4px}
     input[type="text"], input[type="tel"], input[type="number"], select, textarea{
@@ -54,23 +62,35 @@
     textarea{min-height:96px; resize:vertical}
     input:focus, select:focus, textarea:focus{ border-color:var(--accent); box-shadow:0 0 0 4px rgba(122,92,255,.12)}
     .row{display:grid; gap:10px}
+
+    /* Кнопки — явные классы */
+    .btn{appearance:none; border:none; cursor:pointer; padding:12px 16px; border-radius:12px; font-weight:700; }
+    .btn.primary{ background:linear-gradient(135deg,var(--accent),var(--accent-2)); color:#fff; box-shadow:0 8px 24px rgba(255,122,198,.18); }
+    .btn.secondary{ background:#f4f1ff; color:#5a4ae6; box-shadow:none; }
+
     .status{margin-top:14px; font-size:14px}
     .ok{color:var(--ok)} .err{color:var(--err)}
     .footnote{font-size:12px; color:var(--muted)}
     .divider{height:1px;background:#efeaff;margin:10px 0 4px}
+
+    /* Декор */
     .hearts{
       position:absolute; left:-40px; bottom:-20px; width:220px; height:220px; opacity:.15; pointer-events:none;
       background:
         radial-gradient(circle at 40% 40%, #ff73b2 0 12%, transparent 13%),
         radial-gradient(circle at 70% 40%, #ff73b2 0 12%, transparent 13%),
         radial-gradient(circle at 55% 60%, #ff73b2 0 16%, transparent 17%);
-      filter: blur(2px);
-      transform: rotate(-18deg);
+      filter: blur(2px); transform: rotate(-18deg);
     }
     .required{color:#d33;margin-left:4px}
     .consent{display:flex; gap:10px; align-items:flex-start; margin-top:4px}
     .consent input{margin-top:3px}
     .mini{font-size:12px;color:var(--muted)}
+
+    /* Карточки братьев/сестёр */
+    .siblings{display:grid; gap:12px}
+    .sib{ border:1px solid #efeaff; border-radius:14px; padding:12px; background:#fff; }
+    .sib h4{margin:0 0 8px; font-size:14px}
   </style>
 </head>
 <body>
@@ -81,10 +101,13 @@
       <h1>Заявка для ребёнка <span class="badge">благотворительность</span></h1>
       <p class="lead">Пожалуйста, заполните форму — это поможет нам подобрать подарок и учесть особенности ребёнка ❤️</p>
 
-      <!-- Скрытая рамка-цель для отправки без перезагрузки (обход CORS) -->
+      <!-- Скрытая рамка-цель для отправки без перезагрузки -->
       <iframe name="hidden_iframe" style="display:none;"></iframe>
 
       <form id="wishForm" action="https://script.google.com/macros/s/AKfycbwzAkTH7Jg5Ov9-oduX9c18voH3pGrs0ZWoTqIZEVXVfEZxuuZ7dlBNAVtSP5RC_VW2fQ/exec" method="POST" target="hidden_iframe">
+        <!-- сюда соберём текст по братьям/сёстрам -->
+        <input type="hidden" name="siblings_text" id="siblings_text" value=""/>
+
         <div class="grid grid-2">
           <div class="row">
             <label>Имя и фамилия ребёнка <span class="required">*</span></label>
@@ -124,12 +147,11 @@
         <div class="divider"></div>
 
         <h3 style="margin:10px 0 6px">Другие дети в семье</h3>
-        <div class="mini">Формат свободный: имя, возраст, соответствие, пищевые ограничения (если есть).</div>
+        <div class="mini">Добавляйте карточки для каждого ребёнка.</div>
+
+        <div class="siblings" id="siblings"></div>
         <div class="row">
-          <label>Список детей (опционально)</label>
-          <textarea name="siblings_text" placeholder="Например:
-Маша, 4 года, соответствует 4, нет ограничений
-Петя, 8 лет, соответствует 6, глютен"></textarea>
+          <button type="button" class="btn secondary" id="addSib">+ Добавить ребёнка</button>
         </div>
 
         <div class="divider"></div>
@@ -173,8 +195,8 @@
           </label>
         </div>
 
-        <div class="btns">
-          <button type="submit">Отправить заявку</button>
+        <div class="row" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">
+          <button type="submit" class="btn primary">Отправить заявку</button>
           <button type="reset" class="btn secondary">Очистить</button>
         </div>
 
@@ -187,16 +209,88 @@
     const form = document.getElementById('wishForm');
     const statusEl = document.getElementById('status');
 
-    // Нормализация/валидация телефона → к формату +7XXXXXXXXXX
+    // === Блок "Другие дети" — динамические карточки ===
+    const siblingsWrap = document.getElementById('siblings');
+    const addBtn = document.getElementById('addSib');
+    const sibField = document.getElementById('siblings_text');
+
+    function sibTemplate(i){
+      const el = document.createElement('div');
+      el.className = 'sib';
+      el.innerHTML = `
+        <h4>Ребёнок в семье #${i}</h4>
+        <div class="grid grid-2">
+          <div class="row">
+            <label>Имя</label>
+            <input type="text" placeholder="Анна" data-sib="name" />
+          </div>
+          <div class="row">
+            <label>Возраст</label>
+            <input type="text" placeholder="5 лет" data-sib="age" />
+          </div>
+        </div>
+        <div class="grid grid-2">
+          <div class="row">
+            <label>Соответствует развитию (лет)</label>
+            <input type="number" min="0" step="0.1" placeholder="5" data-sib="equivalent" />
+          </div>
+          <div class="row">
+            <label>Пищевые ограничения</label>
+            <input type="text" placeholder="Нет / глютен / лактоза / ..." data-sib="food" />
+          </div>
+        </div>
+        <div class="row" style="margin-top:6px">
+          <button type="button" class="btn secondary" data-action="remove">Удалить</button>
+        </div>
+      `;
+      return el;
+    }
+
+    function renumberSiblings(){
+      document.querySelectorAll('.sib h4').forEach((h,idx)=>h.textContent=`Ребёнок в семье #${idx+1}`);
+    }
+
+    function serializeSiblingsToText(){
+      // Сбор в многострочный текст без JSON
+      const lines = [];
+      document.querySelectorAll('.sib').forEach(box=>{
+        const name = (box.querySelector('[data-sib="name"]').value||'').trim();
+        const age = (box.querySelector('[data-sib="age"]').value||'').trim();
+        const eq  = (box.querySelector('[data-sib="equivalent"]').value||'').trim();
+        const food= (box.querySelector('[data-sib="food"]').value||'').trim();
+        if (name || age || eq || food){
+          const parts = [];
+          if (name) parts.push(name);
+          if (age) parts.push(age);
+          if (eq) parts.push(`соответствует ${eq}`);
+          if (food) parts.push(food);
+          lines.push(parts.join(', '));
+        }
+      });
+      sibField.value = lines.join('\n');
+    }
+
+    addBtn.addEventListener('click', ()=>{
+      const i = document.querySelectorAll('.sib').length + 1;
+      siblingsWrap.appendChild(sibTemplate(i));
+    });
+
+    siblingsWrap.addEventListener('click', (e)=>{
+      if(e.target.matches('[data-action="remove"]')){
+        e.target.closest('.sib').remove();
+        renumberSiblings();
+        serializeSiblingsToText();
+      }
+    });
+
+    siblingsWrap.addEventListener('input', serializeSiblingsToText);
+
+    // === Телефон: нормализация/валидация → +7XXXXXXXXXX ===
     function normalizePhone(raw){
       const digits = (raw.match(/\d/g) || []).join('');
-      // 11 цифр и начинается с 8 → валидно, превращаем в +7
       if (digits.length === 11 && digits[0] === '8') return '+7' + digits.slice(1);
-      // 11 цифр и начинается с 7 → валидно как +7
       if (digits.length === 11 && digits[0] === '7') return '+7' + digits.slice(1);
-      // 10 цифр и начинается с 9 → местный номер, добавляем +7
       if (digits.length === 10 && digits[0] === '9') return '+7' + digits;
-      // вариант с +7 и 11 цифрами внутри
       const compact = raw.replace(/\s|\-|\(|\)/g,'');
       if (compact.startsWith('+7') && digits.length === 11 && digits[0] === '7') {
         return '+7' + digits.slice(1);
@@ -204,18 +298,23 @@
       return null;
     }
 
-    // Скрытый iframe и флаг «мы отправляли»
+    // === Отправка через скрытый iframe ===
     let submitted = false;
     const iframe = document.querySelector('iframe[name="hidden_iframe"]');
     iframe.addEventListener('load', ()=>{
-      if (!submitted) return; // игнорим первый пустой load
+      if (!submitted) return; // игнор первого пустого load
       statusEl.innerHTML = '<span class="ok">Спасибо! Заявка отправлена. Мы свяжемся с вами.</span>';
       form.reset();
+      siblingsWrap.innerHTML = '';
+      sibField.value = '';
       submitted = false;
     });
 
     form.addEventListener('submit', (e)=>{
-      // телефон
+      // собрать братьев/сестёр
+      serializeSiblingsToText();
+
+      // валидировать телефон
       const phoneInput = document.getElementById('phone');
       const norm = normalizePhone(phoneInput.value);
       if(!norm){
@@ -225,6 +324,7 @@
         return;
       }
       phoneInput.value = norm;
+
       submitted = true;
       statusEl.textContent = 'Отправляем...';
     });
