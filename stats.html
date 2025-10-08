@@ -56,14 +56,156 @@
   </div>
 
   <script>
-    const API = 'https://script.google.com/macros/s/AKfycbwzAkTH7Jg5Ov9-oduX9c18voH3pGrs0ZWoTqIZEVXVfEZxuuZ7dlBNAVtSP5RC_VW2fQ/exec?action=stats';
+    // Запрашиваем с флагом rows=1 — если сервер поддерживает, вернёт сырые строки
+    const API = 'https://script.google.com/macros/s/AKfycbwzAkTH7Jg5Ov9-oduX9c18voH3pGrs0ZWoTqIZEVXVfEZxuuZ7dlBNAVtSP5RC_VW2fQ/exec?action=stats&rows=1';
 
     async function loadStats(){
       const res = await fetch(API, {cache:'no-store'});
       const data = await res.json();
-      render(data);
+      // Если сервер прислал rows — пересчитаем всё без дублей
+      const view = Array.isArray(data.rows) ? recomputeFromRows(data.rows) : data;
+      render(view);
     }
 
+    // ====== Пересчёт без дублей на клиенте (если пришли сырые строки) ======
+    function recomputeFromRows(rows){
+      // Нормализуем имена полей => набор объектов с одинаковыми ключами
+      const norm = rows.map(r => normalizeRow(r));
+
+      // Удаляем дубли: оставляем первую запись с одним и тем же ключом семьи
+      const uniqMap = new Map();
+      norm.forEach(r=>{
+        const key = [r.City, r.District, r.Street, r.Apartment, r.Parent_Name, r.Phone].join('|').toLowerCase();
+        if (!uniqMap.has(key)) uniqMap.set(key, r);
+      });
+      const uniq = Array.from(uniqMap.values());
+
+      // Считаем по городам
+      const byCity = {};
+      const addrAll = new Set();
+      uniq.forEach(r=>{
+        const city = r.City || '—';
+        const addrKey = [r.City, r.District, r.Street, r.Apartment].join('|').toLowerCase();
+        addrAll.add(addrKey);
+
+        const gifts = giftsForRow(r);
+        if (!byCity[city]) byCity[city] = { children:0, addressesSet:new Set(), usual:0, unusual:0, gifts:0 };
+        byCity[city].children += gifts.count; // дети = подарки
+        byCity[city].addressesSet.add(addrKey);
+        byCity[city].usual   += gifts.usual;
+        byCity[city].unusual += gifts.unusual;
+        byCity[city].gifts   += gifts.count;
+      });
+
+      const cities = Object.keys(byCity).sort();
+      const byCityOut = {};
+      let totalChildren=0,totalUsual=0,totalUnusual=0,totalGifts=0;
+      cities.forEach(c=>{
+        byCityOut[c] = {
+          children: byCity[c].children,
+          addresses: byCity[c].addressesSet.size,
+          usual: byCity[c].usual,
+          unusual: byCity[c].unusual,
+          gifts: byCity[c].gifts
+        };
+        totalChildren += byCity[c].children;
+        totalUsual    += byCity[c].usual;
+        totalUnusual  += byCity[c].unusual;
+        totalGifts    += byCity[c].gifts;
+      });
+
+      return {
+        cities,
+        byCity: byCityOut,
+        totals: {
+          children: totalChildren,
+          addresses: addrAll.size,
+          usual: totalUsual,
+          unusual: totalUnusual,
+          gifts: totalGifts
+        }
+      };
+    }
+
+    // Подсчёт подарков/необычных для строки (как на сервере)
+    function giftsForRow(r){
+      const mainUnusual = isMainGiftUnusual(r.Food_Restrictions, r.Food_Notes) ? 1 : 0;
+      const sibs = siblingItems(r); // массив {raw, unusual}
+      const count = 1 + sibs.length;
+      const unusual = mainUnusual + sibs.filter(s=>s.unusual).length;
+      const usual = Math.max(count - unusual, 0);
+      return {count, unusual, usual};
+    }
+
+    function isMainGiftUnusual(foodRaw, notesRaw){
+      const food = (foodRaw || '').toString().trim().toLowerCase();
+      const notes = (notesRaw || '').toString().trim().toLowerCase();
+      if (!food && !notes) return false;
+      if (food === 'нет пищевых ограничений') return !!notes;
+      if (food.includes('паллиатив')) return true;
+      if (food && food !== 'нет пищевых ограничений') return true;
+      return !!notes;
+    }
+
+    function siblingItems(r){
+      // поддержка Siblings_Text / Siblings_JSON (JSON или обычный текст)
+      const t = (r.Siblings_Text || '').toString();
+      const j = (r.Siblings_JSON || '').toString();
+
+      if (t.trim()) return parseSiblingText(t);
+      if (j.trim()){
+        try{
+          const arr = JSON.parse(j);
+          if (Array.isArray(arr)) {
+            return arr.map(o=>{
+              const raw = [safe(o.name_age||o.name||''), safe(o.equivalent?`соответствует ${o.equivalent}`:''), safe(o.food||'')].filter(Boolean).join(', ');
+              const l = raw.toLowerCase();
+              const has = /глют|целиак|лакт|аллерг|паллиатив|огранич/.test(l);
+              const no  = /\bнет\b|\bбез огранич/.test(l);
+              return {raw, unusual: has && !no ? true : (!has && no ? false : has)};
+            }).filter(x=>x.raw);
+          }
+        }catch(_){}
+        // если внутри Siblings_JSON лежит не JSON, а текст — тоже разберём
+        return parseSiblingText(j);
+      }
+      return [];
+    }
+
+    function parseSiblingText(raw){
+      const normalized = raw
+        .replace(/•/g, '\n')
+        .replace(/\s[–—-]\s/g, '\n')
+        .replace(/[|/]+/g, '\n')
+        .replace(/;\s*/g, '\n')
+        .replace(/\r?\n+/g, '\n');
+
+      return normalized.split('\n').map(s=>s.trim()).filter(Boolean).map(line=>{
+        const l = line.toLowerCase();
+        const has = /глют|целиак|лакт|аллерг|паллиатив|огранич/.test(l);
+        const no  = /\bнет\b|\bбез огранич/.test(l);
+        return {raw: line, unusual: has && !no ? true : (!has && no ? false : has)};
+      });
+    }
+
+    function normalizeRow(r){
+      // если пришла строка массивом — сопоставим по заголовкам
+      if (Array.isArray(r)) return {};
+      // нормализуем ключи (на всякий случай)
+      const out = {};
+      Object.keys(r).forEach(k=>{
+        out[stdKey(k)] = r[k];
+      });
+      return out;
+    }
+    function stdKey(k){
+      return String(k).trim()
+        .replace(/\s+/g,'_')
+        .replace(/[^\w]/g,'_');
+    }
+    function safe(v){ return (v==null) ? '' : String(v).trim(); }
+
+    // ====== Рендер ======
     function render(data){
       const citySel = document.getElementById('citySel');
       const cities = data.cities.length ? data.cities : ['—'];
