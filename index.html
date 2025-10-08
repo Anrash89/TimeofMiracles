@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Заявка для ребёнка — Время Чудес</title>
+  <style>
+    :root{
+      --bg:#f7f4ff;
+      --card:#ffffff;
+      --accent:#7a5cff;
+      --accent-2:#ff7ac6;
+      --ink:#2b2b2b;
+      --muted:#6b6b6b;
+      --ok:#27ae60;
+      --err:#e74c3c;
+      --ring: 0 8px 40px rgba(122, 92, 255, .15);
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:radial-gradient(1200px 600px at 10% -10%, #ffe8f6 0, transparent 60%), radial-gradient(1000px 800px at 110% 10%, #e7e2ff 0, transparent 60%), var(--bg); color:var(--ink); font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial; }
+    .wrap{max-width:900px;margin:40px auto;padding:16px}
+    .card{
+      background:var(--card);
+      border-radius:20px;
+      box-shadow:var(--ring);
+      padding:24px 22px;
+      position:relative;
+      overflow:hidden;
+    }
+    .halo{
+      position:absolute; inset:-60px -80px auto auto; width:260px; height:260px; 
+      background: conic-gradient(from 0deg, #ffd2ef, #d6c8ff, #ffd2ef);
+      filter: blur(40px) saturate(120%);
+      opacity:.25; border-radius:50%;
+      pointer-events:none;
+    }
+    h1{
+      margin:0 0 6px; font-size:28px; letter-spacing:.2px;
+      display:flex; align-items:center; gap:10px;
+    }
+    h1 .badge{
+      background:linear-gradient(135deg,var(--accent),var(--accent-2));
+      color:#fff; font-size:12px; padding:6px 10px; border-radius:999px;
+    }
+    p.lead{margin:0 0 20px;color:var(--muted)}
+    .grid{display:grid; gap:14px}
+    @media (min-width:720px){ .grid-2{ grid-template-columns:1fr 1fr; } .grid-3{ grid-template-columns:1fr 1fr 1fr; } }
+    label{font-weight:600; font-size:14px; margin-bottom:6px; display:block}
+    .hint{font-size:12px;color:var(--muted);margin-top:4px}
+    input[type="text"], input[type="tel"], input[type="number"], select, textarea{
+      width:100%; padding:12px 14px; border-radius:12px; border:1px solid #e6e0ff; outline:none; background:#fff;
+      transition:.2s border-color, .2s box-shadow;
+    }
+    textarea{min-height:96px; resize:vertical}
+    input:focus, select:focus, textarea:focus{ border-color:var(--accent); box-shadow:0 0 0 4px rgba(122,92,255,.12)}
+    .row{display:grid; gap:10px}
+    .pill{
+      display:inline-flex; align-items:center; gap:8px; background:#faf8ff; border:1px dashed #e6e0ff; padding:10px 12px; border-radius:999px; font-size:13px; color:#4f4a6b
+    }
+    .btns{display:flex; gap:10px; flex-wrap:wrap; margin-top:6px}
+    button, .btn{
+      border:none; cursor:pointer; padding:12px 16px; border-radius:12px; font-weight:700;
+      background:linear-gradient(135deg,var(--accent),var(--accent-2)); color:#fff; box-shadow:0 8px 24px rgba(255,122,198,.18);
+    }
+    .btn.secondary{ background:#f4f1ff; color:#5a4ae6; box-shadow:none }
+    .siblings{display:grid; gap:12px}
+    .sib{
+      border:1px solid #efeaff; border-radius:14px; padding:12px; background:#fff;
+    }
+    .sib h4{margin:0 0 8px; font-size:14px}
+    .status{margin-top:14px; font-size:14px}
+    .ok{color:var(--ok)} .err{color:var(--err)}
+    .footnote{font-size:12px; color:var(--muted)}
+    .divider{height:1px;background:#efeaff;margin:10px 0 4px}
+    .hearts{
+      position:absolute; left:-40px; bottom:-20px; width:220px; height:220px; opacity:.15; pointer-events:none;
+      background:
+        radial-gradient(circle at 40% 40%, #ff73b2 0 12%, transparent 13%),
+        radial-gradient(circle at 70% 40%, #ff73b2 0 12%, transparent 13%),
+        radial-gradient(circle at 55% 60%, #ff73b2 0 16%, transparent 17%);
+      filter: blur(2px);
+      transform: rotate(-18deg);
+    }
+    .required{color:#d33;margin-left:4px}
+    .consent{display:flex; gap:10px; align-items:flex-start; margin-top:4px}
+    .consent input{margin-top:3px}
+    .mini{font-size:12px;color:var(--muted)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="halo"></div>
+      <div class="hearts"></div>
+      <h1>Заявка для ребёнка <span class="badge">благотворительность</span></h1>
+      <p class="lead">Пожалуйста, заполните форму — это поможет нам подобрать подарок и учесть особенности ребёнка ❤️</p>
+
+      <!-- Скрытая рамка-цель для отправки без перезагрузки (обход CORS) -->
+      <iframe name="hidden_iframe" style="display:none;"></iframe>
+
+      <form id="wishForm" action="https://script.google.com/macros/s/AKfycbwzAkTH7Jg5Ov9-oduX9c18voH3pGrs0ZWoTqIZEVXVfEZxuuZ7dlBNAVtSP5RC_VW2fQ/exec" method="POST" target="hidden_iframe">
+        <!-- техническое поле с JSON братьев/сестёр -->
+        <input type="hidden" name="siblings_json" id="siblings_json" />
+
+        <div class="grid grid-2">
+          <div class="row">
+            <label>Имя и фамилия ребёнка <span class="required">*</span></label>
+            <input type="text" name="child_name" required placeholder="Иван Иванов" />
+          </div>
+          <div class="row">
+            <label>Возраст (полных лет) <span class="required">*</span></label>
+            <input type="number" name="child_age" min="0" max="18" required placeholder="7" />
+          </div>
+        </div>
+
+        <div class="grid grid-2">
+          <div class="row">
+            <label>Соответствует развитию (лет) <span class="required">*</span></label>
+            <input type="number" name="child_equivalent_age" min="0" max="18" required placeholder="5" />
+            <div class="hint">Например: 7 лет, соответствует 5 годам</div>
+          </div>
+          <div class="row">
+            <label>Пищевые ограничения <span class="required">*</span></label>
+            <select name="food_restrictions" id="food_select" required>
+              <option value="" selected disabled>Выберите</option>
+              <option>Нет пищевых ограничений</option>
+              <option>Не переносит глютен</option>
+              <option>Непереносимость лактозы</option>
+              <option>Аллергии (указать ниже)</option>
+              <option>Другое (указать ниже)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row">
+          <label>Пояснение по ограничениям (если есть)</label>
+          <textarea name="food_notes" placeholder="Например: аллергия на орехи"></textarea>
+        </div>
+
+        <div class="divider"></div>
+
+        <h3 style="margin:10px 0 6px">Другие дети в семье</h3>
+        <div class="mini">Добавьте братьев/сестёр, если хотите — это поможет нам учитывать семью целиком.</div>
+
+        <div class="siblings" id="siblings"></div>
+        <div class="btns">
+          <button type="button" class="btn secondary" id="addSib">+ Добавить ребёнка</button>
+        </div>
+
+        <div class="divider"></div>
+
+        <h3 style="margin:10px 0 6px">Контакты и адрес</h3>
+        <div class="grid grid-3">
+          <div class="row">
+            <label>Город <span class="required">*</span></label>
+            <input type="text" name="city" required placeholder="Новосибирск" />
+          </div>
+          <div class="row">
+            <label>Район <span class="required">*</span></label>
+            <input type="text" name="district" required placeholder="Центральный" />
+          </div>
+          <div class="row">
+            <label>Улица и дом <span class="required">*</span></label>
+            <input type="text" name="street" required placeholder="Красный проспект, 188" />
+          </div>
+        </div>
+
+        <div class="grid grid-3">
+          <div class="row">
+            <label>Квартира</label>
+            <input type="text" name="apartment" placeholder="Кв. 12" />
+          </div>
+          <div class="row">
+            <label>Имя мамы (опекуна) <span class="required">*</span></label>
+            <input type="text" name="parent_name" required placeholder="Екатерина Иванова" />
+          </div>
+          <div class="row">
+            <label>Телефон <span class="required">*</span></label>
+            <input type="tel" name="phone" required placeholder="8 952 888-88-88" pattern="[\d\s\+\-\(\)]{8,}" />
+            <div class="hint">Любой формат: 8952..., +7..., (xxx) ...</div>
+          </div>
+        </div>
+
+        <div class="consent">
+          <input type="checkbox" id="consent" required />
+          <label for="consent" class="footnote">
+            Я согласен(на) на обработку персональных данных для целей благотворительной помощи. <span class="required">*</span>
+          </label>
+        </div>
+
+        <div class="btns">
+          <button type="submit">Отправить заявку</button>
+          <button type="reset" class="btn secondary">Очистить</button>
+        </div>
+
+        <div id="status" class="status"></div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Динамические блоки "Другие дети в семье"
+    const siblingsWrap = document.getElementById('siblings');
+    const addBtn = document.getElementById('addSib');
+    const sibTemplate = () => {
+      const i = document.querySelectorAll('.sib').length + 1;
+      const el = document.createElement('div');
+      el.className = 'sib';
+      el.innerHTML = `
+        <h4>Ребёнок в семье #${i}</h4>
+        <div class="grid grid-2">
+          <div class="row">
+            <label>Имя и возраст</label>
+            <input type="text" placeholder="Анна, 5 лет" data-sib="name_age" />
+          </div>
+          <div class="row">
+            <label>Соответствие развитию (лет)</label>
+            <input type="number" min="0" max="18" placeholder="5" data-sib="equivalent" />
+          </div>
+        </div>
+        <div class="grid grid-2">
+          <div class="row">
+            <label>Пищевые ограничения</label>
+            <input type="text" placeholder="Нет / глютен / лактоза / ..." data-sib="food" />
+          </div>
+          <div class="row">
+            <button type="button" class="btn secondary" data-action="remove">Удалить</button>
+          </div>
+        </div>
+      `;
+      return el;
+    };
+    addBtn.addEventListener('click', () => siblingsWrap.appendChild(sibTemplate()));
+    siblingsWrap.addEventListener('click', (e)=>{
+      if(e.target.matches('[data-action="remove"]')){
+        e.target.closest('.sib').remove();
+        // Переподписать заголовки
+        document.querySelectorAll('.sib h4').forEach((h,idx)=>h.textContent=`Ребёнок в семье #${idx+1}`);
+      }
+    });
+
+    // Сериализация братьев/сестёр в hidden input как JSON
+    const form = document.getElementById('wishForm');
+    const sibField = document.getElementById('siblings_json');
+    const statusEl = document.getElementById('status');
+
+    function collectSiblings(){
+      const list = [];
+      document.querySelectorAll('.sib').forEach(box=>{
+        list.push({
+          name_age: box.querySelector('[data-sib="name_age"]').value.trim(),
+          equivalent: box.querySelector('[data-sib="equivalent"]').value.trim(),
+          food: box.querySelector('[data-sib="food"]').value.trim()
+        });
+      });
+      return list;
+    }
+
+    // Показываем статус после загрузки скрытого iframe
+    const iframe = document.querySelector('iframe[name="hidden_iframe"]');
+    iframe.addEventListener('load', ()=>{
+      // Предполагаем успех (Apps Script возвращает HTML/текст)
+      statusEl.innerHTML = '<span class="ok">Спасибо! Заявка отправлена. Мы свяжемся с вами.</span>';
+      form.reset();
+      // Очищаем динамические блоки
+      siblingsWrap.innerHTML = '';
+    });
+
+    form.addEventListener('submit', (e)=>{
+      // перед отправкой упакуем JSON братьев/сестёр
+      sibField.value = JSON.stringify(collectSiblings());
+      statusEl.textContent = 'Отправляем...';
+    });
+  </script>
+</body>
+</html>
