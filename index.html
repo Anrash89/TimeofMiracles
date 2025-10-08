@@ -63,14 +63,14 @@
     input:focus, select:focus, textarea:focus{ border-color:var(--accent); box-shadow:0 0 0 4px rgba(122,92,255,.12)}
     .row{display:grid; gap:10px}
 
-    /* Кнопки — явные классы */
+    /* Кнопки */
     .btn{appearance:none; border:none; cursor:pointer; padding:12px 16px; border-radius:12px; font-weight:700; }
     .btn.primary{ background:linear-gradient(135deg,var(--accent),var(--accent-2)); color:#fff; box-shadow:0 8px 24px rgba(255,122,198,.18); }
     .btn.secondary{ background:#f4f1ff; color:#5a4ae6; box-shadow:none; }
 
     .status{margin-top:14px; font-size:14px}
     .ok{color:var(--ok)} .err{color:var(--err)}
-    .footnote{font-size:12px; color:var(--muted)}
+    .footnote{font-size:12px; color:#6b6b6b}
     .divider{height:1px;background:#efeaff;margin:10px 0 4px}
 
     /* Декор */
@@ -85,12 +85,16 @@
     .required{color:#d33;margin-left:4px}
     .consent{display:flex; gap:10px; align-items:flex-start; margin-top:4px}
     .consent input{margin-top:3px}
-    .mini{font-size:12px;color:var(--muted)}
+    .mini{font-size:12px;color:#6b6b6b}
 
     /* Карточки братьев/сестёр */
     .siblings{display:grid; gap:12px}
     .sib{ border:1px solid #efeaff; border-radius:14px; padding:12px; background:#fff; }
     .sib h4{margin:0 0 8px; font-size:14px}
+
+    /* --- скрываем подсказки и плейсхолдеры --- */
+    .hint{ display:none !important; }
+    input::placeholder, textarea::placeholder{ color:transparent !important; }
   </style>
 </head>
 <body>
@@ -105,7 +109,7 @@
       <iframe name="hidden_iframe" style="display:none;"></iframe>
 
       <form id="wishForm" action="https://script.google.com/macros/s/AKfycbwzAkTH7Jg5Ov9-oduX9c18voH3pGrs0ZWoTqIZEVXVfEZxuuZ7dlBNAVtSP5RC_VW2fQ/exec" method="POST" target="hidden_iframe">
-        <!-- сюда соберём текст по братьям/сёстрам -->
+        <!-- Сюда соберём многострочный текст по братьям/сёстрам -->
         <input type="hidden" name="siblings_text" id="siblings_text" value=""/>
 
         <div class="grid grid-2">
@@ -123,7 +127,6 @@
           <div class="row">
             <label>Соответствует развитию (лет) <span class="required">*</span></label>
             <input type="number" name="child_equivalent_age" min="0" step="0.1" required placeholder="5" />
-            <div class="hint">Например: 7 лет, соответствует 5 годам</div>
           </div>
           <div class="row">
             <label>Пищевые ограничения <span class="required">*</span></label>
@@ -251,13 +254,12 @@
     }
 
     function serializeSiblingsToText(){
-      // Сбор в многострочный текст без JSON
       const lines = [];
       document.querySelectorAll('.sib').forEach(box=>{
         const name = (box.querySelector('[data-sib="name"]').value||'').trim();
-        const age = (box.querySelector('[data-sib="age"]').value||'').trim();
-        const eq  = (box.querySelector('[data-sib="equivalent"]').value||'').trim();
-        const food= (box.querySelector('[data-sib="food"]').value||'').trim();
+        const age  = (box.querySelector('[data-sib="age"]').value||'').trim();
+        const eq   = (box.querySelector('[data-sib="equivalent"]').value||'').trim();
+        const food = (box.querySelector('[data-sib="food"]').value||'').trim();
         if (name || age || eq || food){
           const parts = [];
           if (name) parts.push(name);
