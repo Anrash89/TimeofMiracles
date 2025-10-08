@@ -54,20 +54,6 @@
     textarea{min-height:96px; resize:vertical}
     input:focus, select:focus, textarea:focus{ border-color:var(--accent); box-shadow:0 0 0 4px rgba(122,92,255,.12)}
     .row{display:grid; gap:10px}
-    .pill{
-      display:inline-flex; align-items:center; gap:8px; background:#faf8ff; border:1px dashed #e6e0ff; padding:10px 12px; border-radius:999px; font-size:13px; color:#4f4a6b
-    }
-    .btns{display:flex; gap:10px; flex-wrap:wrap; margin-top:6px}
-    button, .btn{
-      border:none; cursor:pointer; padding:12px 16px; border-radius:12px; font-weight:700;
-      background:linear-gradient(135deg,var(--accent),var(--accent-2)); color:#fff; box-shadow:0 8px 24px rgba(255,122,198,.18);
-    }
-    .btn.secondary{ background:#f4f1ff; color:#5a4ae6; box-shadow:none }
-    .siblings{display:grid; gap:12px}
-    .sib{
-      border:1px solid #efeaff; border-radius:14px; padding:12px; background:#fff;
-    }
-    .sib h4{margin:0 0 8px; font-size:14px}
     .status{margin-top:14px; font-size:14px}
     .ok{color:var(--ok)} .err{color:var(--err)}
     .footnote{font-size:12px; color:var(--muted)}
@@ -99,9 +85,6 @@
       <iframe name="hidden_iframe" style="display:none;"></iframe>
 
       <form id="wishForm" action="https://script.google.com/macros/s/AKfycbwzAkTH7Jg5Ov9-oduX9c18voH3pGrs0ZWoTqIZEVXVfEZxuuZ7dlBNAVtSP5RC_VW2fQ/exec" method="POST" target="hidden_iframe">
-        <!-- техническое поле с JSON братьев/сестёр -->
-        <input type="hidden" name="siblings_json" id="siblings_json" />
-
         <div class="grid grid-2">
           <div class="row">
             <label>Имя и фамилия ребёнка <span class="required">*</span></label>
@@ -109,14 +92,14 @@
           </div>
           <div class="row">
             <label>Возраст (полных лет) <span class="required">*</span></label>
-            <input type="number" name="child_age" min="0" max="99" required placeholder="7" />
+            <input type="number" name="child_age" min="0" step="0.1" required placeholder="7" />
           </div>
         </div>
 
         <div class="grid grid-2">
           <div class="row">
             <label>Соответствует развитию (лет) <span class="required">*</span></label>
-            <input type="number" name="child_equivalent_age" min="0" max="99" required placeholder="5" />
+            <input type="number" name="child_equivalent_age" min="0" step="0.1" required placeholder="5" />
             <div class="hint">Например: 7 лет, соответствует 5 годам</div>
           </div>
           <div class="row">
@@ -128,6 +111,7 @@
               <option>Непереносимость лактозы</option>
               <option>Аллергии (указать ниже)</option>
               <option>Другое (указать ниже)</option>
+              <option>Паллиатив</option>
             </select>
           </div>
         </div>
@@ -140,11 +124,12 @@
         <div class="divider"></div>
 
         <h3 style="margin:10px 0 6px">Другие дети в семье</h3>
-        <div class="mini">Добавьте братьев/сестёр, если хотите — это поможет нам учитывать семью целиком.</div>
-
-        <div class="siblings" id="siblings"></div>
-        <div class="btns">
-          <button type="button" class="btn secondary" id="addSib">+ Добавить ребёнка</button>
+        <div class="mini">Формат свободный: имя, возраст, соответствие, пищевые ограничения (если есть).</div>
+        <div class="row">
+          <label>Список детей (опционально)</label>
+          <textarea name="siblings_text" placeholder="Например:
+Маша, 4 года, соответствует 4, нет ограничений
+Петя, 8 лет, соответствует 6, глютен"></textarea>
         </div>
 
         <div class="divider"></div>
@@ -176,8 +161,8 @@
           </div>
           <div class="row">
             <label>Телефон <span class="required">*</span></label>
-            <input type="tel" name="phone" required placeholder="8 952 888-88-88" pattern="[\d\s\+\-\(\)]{8,}" />
-            <div class="hint">Любой формат: 8952..., +7..., (xxx) ...</div>
+            <input type="tel" name="phone" id="phone" required placeholder="+7 913 913-33-33" />
+            <div class="hint">Принимаются: +7XXXXXXXXXX, 8XXXXXXXXXX, 9XXXXXXXXX (с пробелами/скобками/дефисами тоже ок)</div>
           </div>
         </div>
 
@@ -199,76 +184,48 @@
   </div>
 
   <script>
-    // Динамические блоки "Другие дети в семье"
-    const siblingsWrap = document.getElementById('siblings');
-    const addBtn = document.getElementById('addSib');
-    const sibTemplate = () => {
-      const i = document.querySelectorAll('.sib').length + 1;
-      const el = document.createElement('div');
-      el.className = 'sib';
-      el.innerHTML = `
-        <h4>Ребёнок в семье #${i}</h4>
-        <div class="grid grid-2">
-          <div class="row">
-            <label>Имя и возраст</label>
-            <input type="text" placeholder="Анна, 5 лет" data-sib="name_age" />
-          </div>
-          <div class="row">
-            <label>Соответствие развитию (лет)</label>
-            <input type="number" min="0" max="18" placeholder="5" data-sib="equivalent" />
-          </div>
-        </div>
-        <div class="grid grid-2">
-          <div class="row">
-            <label>Пищевые ограничения</label>
-            <input type="text" placeholder="Нет / глютен / лактоза / ..." data-sib="food" />
-          </div>
-          <div class="row">
-            <button type="button" class="btn secondary" data-action="remove">Удалить</button>
-          </div>
-        </div>
-      `;
-      return el;
-    };
-    addBtn.addEventListener('click', () => siblingsWrap.appendChild(sibTemplate()));
-    siblingsWrap.addEventListener('click', (e)=>{
-      if(e.target.matches('[data-action="remove"]')){
-        e.target.closest('.sib').remove();
-        // Переподписать заголовки
-        document.querySelectorAll('.sib h4').forEach((h,idx)=>h.textContent=`Ребёнок в семье #${idx+1}`);
-      }
-    });
-
-    // Сериализация братьев/сестёр в hidden input как JSON
     const form = document.getElementById('wishForm');
-    const sibField = document.getElementById('siblings_json');
     const statusEl = document.getElementById('status');
 
-    function collectSiblings(){
-      const list = [];
-      document.querySelectorAll('.sib').forEach(box=>{
-        list.push({
-          name_age: box.querySelector('[data-sib="name_age"]').value.trim(),
-          equivalent: box.querySelector('[data-sib="equivalent"]').value.trim(),
-          food: box.querySelector('[data-sib="food"]').value.trim()
-        });
-      });
-      return list;
+    // Нормализация/валидация телефона → к формату +7XXXXXXXXXX
+    function normalizePhone(raw){
+      const digits = (raw.match(/\d/g) || []).join('');
+      // 11 цифр и начинается с 8 → валидно, превращаем в +7
+      if (digits.length === 11 && digits[0] === '8') return '+7' + digits.slice(1);
+      // 11 цифр и начинается с 7 → валидно как +7
+      if (digits.length === 11 && digits[0] === '7') return '+7' + digits.slice(1);
+      // 10 цифр и начинается с 9 → местный номер, добавляем +7
+      if (digits.length === 10 && digits[0] === '9') return '+7' + digits;
+      // вариант с +7 и 11 цифрами внутри
+      const compact = raw.replace(/\s|\-|\(|\)/g,'');
+      if (compact.startsWith('+7') && digits.length === 11 && digits[0] === '7') {
+        return '+7' + digits.slice(1);
+      }
+      return null;
     }
 
-    // Показываем статус после загрузки скрытого iframe
+    // Скрытый iframe и флаг «мы отправляли»
+    let submitted = false;
     const iframe = document.querySelector('iframe[name="hidden_iframe"]');
     iframe.addEventListener('load', ()=>{
-      // Предполагаем успех (Apps Script возвращает HTML/текст)
+      if (!submitted) return; // игнорим первый пустой load
       statusEl.innerHTML = '<span class="ok">Спасибо! Заявка отправлена. Мы свяжемся с вами.</span>';
       form.reset();
-      // Очищаем динамические блоки
-      siblingsWrap.innerHTML = '';
+      submitted = false;
     });
 
     form.addEventListener('submit', (e)=>{
-      // перед отправкой упакуем JSON братьев/сестёр
-      sibField.value = JSON.stringify(collectSiblings());
+      // телефон
+      const phoneInput = document.getElementById('phone');
+      const norm = normalizePhone(phoneInput.value);
+      if(!norm){
+        e.preventDefault();
+        statusEl.innerHTML = '<span class="err">Проверьте телефон. Пример: +7 913 913-33-33 или 8 913 913 33 33 или 9139133333.</span>';
+        phoneInput.focus();
+        return;
+      }
+      phoneInput.value = norm;
+      submitted = true;
       statusEl.textContent = 'Отправляем...';
     });
   </script>
