@@ -92,7 +92,7 @@
     .sib{ border:1px solid #efeaff; border-radius:14px; padding:12px; background:#fff; }
     .sib h4{margin:0 0 8px; font-size:14px}
 
-    /* --- скрываем подсказки и плейсхолдеры --- */
+    /* Спрятать подсказки и плейсхолдеры */
     .hint{ display:none !important; }
     input::placeholder, textarea::placeholder{ color:transparent !important; }
   </style>
@@ -239,7 +239,15 @@
           </div>
           <div class="row">
             <label>Пищевые ограничения</label>
-            <input type="text" placeholder="Нет / глютен / лактоза / ..." data-sib="food" />
+            <select data-sib="food">
+              <option value="" selected disabled>Выберите</option>
+              <option>Нет пищевых ограничений</option>
+              <option>Не переносит глютен</option>
+              <option>Непереносимость лактозы</option>
+              <option>Аллергии (указать ниже)</option>
+              <option>Другое (указать ниже)</option>
+              <option>Паллиатив</option>
+            </select>
           </div>
         </div>
         <div class="row" style="margin-top:6px">
@@ -259,12 +267,14 @@
         const name = (box.querySelector('[data-sib="name"]').value||'').trim();
         const age  = (box.querySelector('[data-sib="age"]').value||'').trim();
         const eq   = (box.querySelector('[data-sib="equivalent"]').value||'').trim();
-        const food = (box.querySelector('[data-sib="food"]').value||'').trim();
+        const foodSel = box.querySelector('[data-sib="food"]');
+        const food = foodSel ? (foodSel.value || '').trim() : '';
+
         if (name || age || eq || food){
           const parts = [];
           if (name) parts.push(name);
           if (age) parts.push(age);
-          if (eq) parts.push(`соответствует ${eq}`);
+          if (eq)  parts.push(`соответствует ${eq}`);
           if (food) parts.push(food);
           lines.push(parts.join(', '));
         }
@@ -286,6 +296,7 @@
     });
 
     siblingsWrap.addEventListener('input', serializeSiblingsToText);
+    siblingsWrap.addEventListener('change', serializeSiblingsToText);
 
     // === Телефон: нормализация/валидация → +7XXXXXXXXXX ===
     function normalizePhone(raw){
