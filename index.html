@@ -36,17 +36,18 @@
     .halo{
       position:absolute; inset:-60px -80px auto auto; width:260px; height:260px;
       background: conic-gradient(from 0deg, #ffd2ef, #d6c8ff, #ffd2ef);
-      filter: blur(40px) saturate(120%);
-      opacity:.25; border-radius:50%; pointer-events:none;
+      filter: blur(40px) saturate(120%); opacity:.25; border-radius:50%; pointer-events:none;
     }
-    h1{
-      margin:0 0 6px; font-size:28px; letter-spacing:.2px;
-      display:flex; align-items:center; gap:10px;
+    .hearts{
+      position:absolute; left:-40px; bottom:-20px; width:220px; height:220px; opacity:.15; pointer-events:none;
+      background:
+        radial-gradient(circle at 40% 40%, #ff73b2 0 12%, transparent 13%),
+        radial-gradient(circle at 70% 40%, #ff73b2 0 12%, transparent 13%),
+        radial-gradient(circle at 55% 60%, #ff73b2 0 16%, transparent 17%);
+      filter: blur(2px); transform: rotate(-18deg);
     }
-    h1 .badge{
-      background:linear-gradient(135deg,var(--accent),var(--accent-2));
-      color:#fff; font-size:12px; padding:6px 10px; border-radius:999px;
-    }
+    h1{ margin:0 0 6px; font-size:28px; letter-spacing:.2px; display:flex; align-items:center; gap:10px; }
+    h1 .badge{ background:linear-gradient(135deg,var(--accent),var(--accent-2)); color:#fff; font-size:12px; padding:6px 10px; border-radius:999px; }
     p.lead{margin:0 0 20px;color:var(--muted)}
     .grid{display:grid; gap:14px}
     @media (min-width:720px){
@@ -72,16 +73,6 @@
     .ok{color:var(--ok)} .err{color:var(--err)}
     .footnote{font-size:12px; color:#6b6b6b}
     .divider{height:1px;background:#efeaff;margin:10px 0 4px}
-
-    /* Декор */
-    .hearts{
-      position:absolute; left:-40px; bottom:-20px; width:220px; height:220px; opacity:.15; pointer-events:none;
-      background:
-        radial-gradient(circle at 40% 40%, #ff73b2 0 12%, transparent 13%),
-        radial-gradient(circle at 70% 40%, #ff73b2 0 12%, transparent 13%),
-        radial-gradient(circle at 55% 60%, #ff73b2 0 16%, transparent 17%);
-      filter: blur(2px); transform: rotate(-18deg);
-    }
     .required{color:#d33;margin-left:4px}
     .consent{display:flex; gap:10px; align-items:flex-start; margin-top:4px}
     .consent input{margin-top:3px}
@@ -95,6 +86,13 @@
     /* Спрятать подсказки и плейсхолдеры */
     .hint{ display:none !important; }
     input::placeholder, textarea::placeholder{ color:transparent !important; }
+
+    /* Шаг выбора города */
+    .center{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    .muted{color:#6b6b6b;font-size:14px}
+    .hidden{display:none !important}
+    .notice{background:#fff7f7;border:1px solid #ffdede;color:#9b2c2c;padding:12px 14px;border-radius:12px;font-size:14px}
+    .good{background:#f4fff6;border:1px solid #dff5e4;color:#1f7a3a;padding:12px 14px;border-radius:12px;font-size:14px}
   </style>
 </head>
 <body>
@@ -103,30 +101,51 @@
       <div class="halo"></div>
       <div class="hearts"></div>
       <h1>Заявка для ребёнка <span class="badge">благотворительность</span></h1>
-      <p class="lead">Пожалуйста, заполните форму — это поможет нам подобрать подарок и учесть особенности ребёнка ❤️</p>
+      <p class="lead">Пожалуйста, сначала выберите город — мы проверим, открыт ли набор в нём ❤️</p>
+
+      <!-- ШАГ 0 — выбор города -->
+      <div id="cityStep">
+        <div class="center" style="margin:6px 0 10px">
+          <label for="cityChooser" style="font-weight:700">Город</label>
+          <select id="cityChooser" style="min-width:260px">
+            <!-- заполним из JS -->
+          </select>
+          <button id="goBtn" class="btn primary">Продолжить</button>
+        </div>
+        <div id="cityNote" class="muted"></div>
+        <div id="cityLock" class="notice hidden" style="margin-top:10px">
+          К сожалению, набор заявок в этом городе уже завершён.  
+          Пожалуйста, выберите другой город — мы очень ценим ваш отклик 🙏
+        </div>
+        <div id="cityOk" class="good hidden" style="margin-top:10px">
+          Набор в этом городе открыт. Можно заполнить форму ниже.
+        </div>
+        <div class="divider"></div>
+      </div>
 
       <!-- Скрытая рамка-цель для отправки без перезагрузки -->
       <iframe name="hidden_iframe" style="display:none;"></iframe>
 
-      <form id="wishForm" action="https://script.google.com/macros/s/AKfycbwzAkTH7Jg5Ov9-oduX9c18voH3pGrs0ZWoTqIZEVXVfEZxuuZ7dlBNAVtSP5RC_VW2fQ/exec" method="POST" target="hidden_iframe">
+      <!-- ШАГ 1 — форма (по умолчанию скрыта до выбора города) -->
+      <form id="wishForm" class="hidden" action="https://script.google.com/macros/s/AKfycbwzAkTH7Jg5Ov9-oduX9c18voH3pGrs0ZWoTqIZEVXVfEZxuuZ7dlBNAVtSP5RC_VW2fQ/exec" method="POST" target="hidden_iframe">
         <!-- Сюда соберём многострочный текст по братьям/сёстрам -->
         <input type="hidden" name="siblings_text" id="siblings_text" value=""/>
 
         <div class="grid grid-2">
           <div class="row">
             <label>Имя и фамилия ребёнка <span class="required">*</span></label>
-            <input type="text" name="child_name" required placeholder="Иван Иванов" />
+            <input type="text" name="child_name" required />
           </div>
           <div class="row">
             <label>Возраст (полных лет) <span class="required">*</span></label>
-            <input type="number" name="child_age" min="0" step="0.1" required placeholder="7" />
+            <input type="number" name="child_age" min="0" step="0.1" required />
           </div>
         </div>
 
         <div class="grid grid-2">
           <div class="row">
             <label>Соответствует развитию (лет) <span class="required">*</span></label>
-            <input type="number" name="child_equivalent_age" min="0" step="0.1" required placeholder="5" />
+            <input type="number" name="child_equivalent_age" min="0" step="0.1" required />
           </div>
           <div class="row">
             <label>Пищевые ограничения <span class="required">*</span></label>
@@ -144,7 +163,7 @@
 
         <div class="row">
           <label>Пояснение по ограничениям (если есть)</label>
-          <textarea name="food_notes" placeholder="Например: аллергия на орехи"></textarea>
+          <textarea name="food_notes"></textarea>
         </div>
 
         <div class="divider"></div>
@@ -163,30 +182,30 @@
         <div class="grid grid-3">
           <div class="row">
             <label>Город <span class="required">*</span></label>
-            <input type="text" name="city" required placeholder="Новосибирск" />
+            <input type="text" name="city" id="cityField" required readonly />
           </div>
           <div class="row">
             <label>Район <span class="required">*</span></label>
-            <input type="text" name="district" required placeholder="Центральный" />
+            <input type="text" name="district" required />
           </div>
           <div class="row">
             <label>Улица и дом <span class="required">*</span></label>
-            <input type="text" name="street" required placeholder="Красный проспект, 188" />
+            <input type="text" name="street" required />
           </div>
         </div>
 
         <div class="grid grid-3">
           <div class="row">
             <label>Квартира</label>
-            <input type="text" name="apartment" placeholder="Кв. 12" />
+            <input type="text" name="apartment" />
           </div>
           <div class="row">
             <label>Имя мамы (опекуна) <span class="required">*</span></label>
-            <input type="text" name="parent_name" required placeholder="Екатерина Иванова" />
+            <input type="text" name="parent_name" required />
           </div>
           <div class="row">
             <label>Телефон <span class="required">*</span></label>
-            <input type="tel" name="phone" id="phone" required placeholder="+7 913 913-33-33" />
+            <input type="tel" name="phone" id="phone" required />
             <div class="hint">Принимаются: +7XXXXXXXXXX, 8XXXXXXXXXX, 9XXXXXXXXX (с пробелами/скобками/дефисами тоже ок)</div>
           </div>
         </div>
@@ -200,7 +219,7 @@
 
         <div class="row" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">
           <button type="submit" class="btn primary">Отправить заявку</button>
-          <button type="reset" class="btn secondary">Очистить</button>
+          <button type="reset" class="btn secondary" id="resetBtn">Очистить</button>
         </div>
 
         <div id="status" class="status"></div>
@@ -209,10 +228,76 @@
   </div>
 
   <script>
+    // ==== Конфиг ====
+    const API_STATS = 'https://script.google.com/macros/s/AKfycbwzAkTH7Jg5Ov9-oduX9c18voH3pGrs0ZWoTqIZEVXVfEZxuuZ7dlBNAVtSP5RC_VW2fQ/exec?action=stats';
+    const CITY_LIMIT = 500;
+    const CITIES = [
+      "Новосибирск","Томск","Красноярск","Обь","Искитим","Бердск","Челябинск","Екатеринбург","Тюмень",
+      "Новомосковск","Владимир","Пашино","Гвардейский","Камень-на-Оби","ДНР","Гатчина","Краснообск",
+      "Тогучин","Сокур","Куйбышев","Колывань","Верх Тула","Самара","Норильск","Черепаново","Вороново",
+      "Кольцово","Казанка","Кинель (Алексеевка, Самарская обл.)","Кудряшовский","Большая Черниговка"
+    ];
+
+    // ==== Шаг выбора города ====
+    const cityStep = document.getElementById('cityStep');
+    const cityChooser = document.getElementById('cityChooser');
+    const cityNote = document.getElementById('cityNote');
+    const cityLock = document.getElementById('cityLock');
+    const cityOk = document.getElementById('cityOk');
+    const goBtn = document.getElementById('goBtn');
     const form = document.getElementById('wishForm');
-    const statusEl = document.getElementById('status');
+    const cityField = document.getElementById('cityField');
+
+    // заполним список городов
+    cityChooser.innerHTML = CITIES.map(c => `<option value="${c}">${c}</option>`).join('');
+    cityChooser.value = "Новосибирск";
+
+    let statsCache = null;
+    async function ensureStats(){
+      if (statsCache) return statsCache;
+      try{
+        const r = await fetch(API_STATS, {cache:'no-store'});
+        statsCache = await r.json();
+      }catch(_){
+        statsCache = { byCity:{} };
+      }
+      return statsCache;
+    }
+
+    async function checkCity(){
+      cityLock.classList.add('hidden');
+      cityOk.classList.add('hidden');
+      goBtn.disabled = true;
+      cityNote.textContent = 'Проверяем доступность набора в выбранном городе...';
+      const data = await ensureStats();
+      const city = cityChooser.value;
+      const rec = data.byCity && data.byCity[city] ? data.byCity[city] : {addresses:0};
+      const taken = Number(rec.addresses||0);
+      if (taken >= CITY_LIMIT){
+        cityNote.textContent = '';
+        cityLock.classList.remove('hidden');
+        goBtn.disabled = true;
+      }else{
+        cityNote.textContent = '';
+        cityOk.classList.remove('hidden');
+        goBtn.disabled = false;
+      }
+    }
+
+    cityChooser.addEventListener('change', checkCity);
+    checkCity();
+
+    goBtn.addEventListener('click', ()=>{
+      // открываем форму, фиксируем город
+      form.classList.remove('hidden');
+      cityField.value = cityChooser.value;
+      cityField.readOnly = true;
+      // прокрутка к форме
+      form.scrollIntoView({behavior:'smooth', block:'start'});
+    });
 
     // === Блок "Другие дети" — динамические карточки ===
+    const statusEl = document.getElementById('status');
     const siblingsWrap = document.getElementById('siblings');
     const addBtn = document.getElementById('addSib');
     const sibField = document.getElementById('siblings_text');
@@ -225,17 +310,17 @@
         <div class="grid grid-2">
           <div class="row">
             <label>Имя</label>
-            <input type="text" placeholder="Анна" data-sib="name" />
+            <input type="text" data-sib="name" />
           </div>
           <div class="row">
             <label>Возраст</label>
-            <input type="text" placeholder="5 лет" data-sib="age" />
+            <input type="text" data-sib="age" />
           </div>
         </div>
         <div class="grid grid-2">
           <div class="row">
             <label>Соответствует развитию (лет)</label>
-            <input type="number" min="0" step="0.1" placeholder="5" data-sib="equivalent" />
+            <input type="number" min="0" step="0.1" data-sib="equivalent" />
           </div>
           <div class="row">
             <label>Пищевые ограничения</label>
@@ -294,7 +379,6 @@
         serializeSiblingsToText();
       }
     });
-
     siblingsWrap.addEventListener('input', serializeSiblingsToText);
     siblingsWrap.addEventListener('change', serializeSiblingsToText);
 
@@ -315,12 +399,15 @@
     let submitted = false;
     const iframe = document.querySelector('iframe[name="hidden_iframe"]');
     iframe.addEventListener('load', ()=>{
-      if (!submitted) return; // игнор первого пустого load
+      if (!submitted) return;
       statusEl.innerHTML = '<span class="ok">Спасибо! Заявка отправлена. Мы свяжемся с вами.</span>';
       form.reset();
+      // вернуть выбранный город в поле
+      cityField.value = cityChooser.value;
       siblingsWrap.innerHTML = '';
       sibField.value = '';
       submitted = false;
+      window.scrollTo({top:0, behavior:'smooth'});
     });
 
     form.addEventListener('submit', (e)=>{
@@ -338,8 +425,16 @@
       }
       phoneInput.value = norm;
 
+      // зафиксировать выбранный город
+      cityField.value = cityChooser.value;
+
       submitted = true;
       statusEl.textContent = 'Отправляем...';
+    });
+
+    // Сброс формы — вернуть город
+    document.getElementById('resetBtn').addEventListener('click', ()=>{
+      setTimeout(()=>{ cityField.value = cityChooser.value; }, 0);
     });
   </script>
 </body>
