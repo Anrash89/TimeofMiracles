@@ -9,6 +9,7 @@
       --bg:#f7f4ff; --card:#fff; --accent:#7a5cff; --accent-2:#ff7ac6;
       --ink:#2b2b2b; --muted:#6b6b6b; --ring:0 8px 40px rgba(122,92,255,.15);
       --chip:#f4f1ff; --chip-brd:#e6e0ff; --chip-ink:#4b3ecf;
+      --warn:#fff6e5; --warn-brd:#ffe0a8;
     }
     html,body{
       margin:0;
@@ -34,6 +35,7 @@
     .city{display:flex;align-items:center;gap:10px}
     .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
     .btn{border:none;cursor:pointer}
+    .btn.secondary{background:#f3f0ff;color:#5a4ae6;border-radius:999px;padding:8px 12px;font-weight:700}
     .search{padding:10px 12px;border-radius:12px;border:1px solid #e6e0ff;background:#fff;min-width:220px}
     /* чекбоксы-«пилюли» */
     .chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-top:10px}
@@ -48,6 +50,11 @@
     .chip input:checked + .pill{background:#efeaff;border-color:#d7cfff;box-shadow:0 2px 0 #e7defa inset}
     .chip input:checked + .pill .cnt{background:#fff;border-color:#d7cfff;color:var(--chip-ink)}
     .small{font-size:13px;color:#4f4a6b}
+    .hint{
+      display:none;margin-top:10px;background:var(--warn);border:1px solid var(--warn-brd);
+      color:#7a5a00;padding:10px 12px;border-radius:12px;font-size:13px
+    }
+    .hint.show{display:block}
   </style>
 
   <!-- ЛОКАЛЬНО: положи xlsx.full.min.js рядом со stats.html -->
@@ -90,9 +97,11 @@
           <input id="searchCity" class="search" type="text" placeholder="Поиск города..." />
           <label class="small"><input type="checkbox" id="checkAll" /> Выбрать все</label>
           <button id="downloadXlsx" class="badge btn">Скачать .xlsx</button>
+          <button id="shareXlsx" class="btn secondary" title="Для встроенных браузеров на телефонах">Отправить/сохранить (.xlsx)</button>
         </div>
       </div>
       <div id="citiesChecklist" class="chips"></div>
+      <div id="tgHint" class="hint">Похоже, вы в браузере Телеграма. Если кнопка «Скачать .xlsx» не срабатывает, используйте кнопку «Отправить/сохранить (.xlsx)» или откройте страницу в системном браузере (Safari/Chrome) через меню «Открыть в…».</div>
       <div class="note">Экспорт: по листу на каждый выбранный город. Строки = уникальные семьи (адреса). Поля: контакт, телефон, адрес, основной ребёнок, ограничения/пояснения, братья/сёстры, «всего детей / обычных / необычных».</div>
     </div>
 
@@ -108,9 +117,6 @@
     let NORM_ROWS = [];
     let UNIQ_ROWS = [];
     let VIEW_CACHE = null;
-
-    // Библиотека уже подключена локально тегом <script>, просто возвращаем resolved
-    function ensureXlsx(){ return Promise.resolve(); }
 
     // ====== загрузка и подготовка ======
     async function loadStats(){
@@ -136,6 +142,7 @@
       VIEW_CACHE = view;
       render(view);
       buildCitiesChecklist(view.cities, view.byCity);
+      showTgHintIfNeeded();
     }
 
     // ====== пересчёт без дублей ======
@@ -308,35 +315,87 @@
       });
     }
 
+    // ====== подсказка для Telegram WebView ======
+    function showTgHintIfNeeded(){
+      const ua = navigator.userAgent || '';
+      const isTG = /Telegram/i.test(ua);
+      const hasShare = !!navigator.share;
+      const hint = document.getElementById('tgHint');
+      if (isTG && !hasShare) hint.classList.add('show');
+    }
+
     // ====== панель экспорта ======
     document.getElementById('openExport').addEventListener('click', ()=>{
       const p = document.getElementById('exportPanel');
       p.style.display = (p.style.display==='none' || !p.style.display) ? 'block' : 'none';
     });
+
     document.getElementById('checkAll').addEventListener('change', (e)=>{
       document.querySelectorAll('.cityCheck').forEach(cb => { if (cb.offsetParent!==null) cb.checked = e.target.checked; });
     });
 
-    document.getElementById('downloadXlsx').addEventListener('click', async ()=>{
+    // Классическая загрузка файла (для десктопа/нормальных браузеров)
+    document.getElementById('downloadXlsx').addEventListener('click', ()=>{
       const btn = document.getElementById('downloadXlsx');
+      btn.disabled = true; btn.textContent = 'Готовим файл...';
       try{
-        btn.disabled = true; btn.textContent = 'Готовим файл...';
-        await ensureXlsx();
-        const selected = Array.from(document.querySelectorAll('.cityCheck:checked')).map(cb => cb.value);
+        const selected = getSelectedCities();
         if (!selected.length) { alert('Выберите хотя бы один город.'); return; }
-        const wb = buildWorkbook(selected);
-        const stamp = new Date().toISOString().slice(0,10);
-        XLSX.writeFile(wb, `vremya-chudes_${stamp}.xlsx`);
+        const {blob, filename} = buildWorkbookBlob(selected);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = filename; document.body.appendChild(a); a.click();
+        setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 2000);
       }catch(err){
-        console.error(err);
-        alert('Не удалось подготовить файл.');
+        console.error(err); alert('Не удалось подготовить файл.');
       }finally{
         btn.disabled = false; btn.textContent = 'Скачать .xlsx';
       }
     });
 
-    // ====== построение XLSX ======
-    function buildWorkbook(cities){
+    // Кнопка для мобильных (Web Share API — «Поделиться»)
+    document.getElementById('shareXlsx').addEventListener('click', async ()=>{
+      const btn = document.getElementById('shareXlsx');
+      btn.disabled = true; btn.textContent = 'Готовим файл...';
+      try{
+        const selected = getSelectedCities();
+        if (!selected.length) { alert('Выберите хотя бы один город.'); return; }
+
+        const {blob, filename} = buildWorkbookBlob(selected);
+        const file = new File([blob], filename, {type: blob.type});
+
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: 'Время Чудес — списки',
+            text: 'Файл со списками выбранных городов'
+          });
+        } else if (navigator.share) {
+          // У некоторых webview нет canShare(files), но есть share() — попробуем через Blob URL
+          const url = URL.createObjectURL(blob);
+          await navigator.share({ title: filename, url });
+          setTimeout(()=>URL.revokeObjectURL(url), 2000);
+        } else {
+          // Фолбэк — пробуем обычное скачивание
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url; a.download = filename; document.body.appendChild(a); a.click();
+          setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 2000);
+          alert('Если файл не сохранился, откройте страницу в системном браузере (Safari/Chrome) и повторите.');
+        }
+      }catch(err){
+        console.error(err); alert('Не удалось отправить файл.');
+      }finally{
+        btn.disabled = false; btn.textContent = 'Отправить/сохранить (.xlsx)';
+      }
+    });
+
+    function getSelectedCities(){
+      return Array.from(document.querySelectorAll('.cityCheck:checked')).map(cb => cb.value);
+    }
+
+    // ====== построение XLSX (возврат Blob + имя) ======
+    function buildWorkbookBlob(cities){
       if (!UNIQ_ROWS.length) {
         alert('Не удалось получить сырые строки для экспорта. Обновите страницу.');
         throw new Error('No raw rows for export');
@@ -387,7 +446,11 @@
       autoSizeColumns(wsSum, summary);
       XLSX.utils.book_append_sheet(wb, wsSum, 'Сводка');
 
-      return wb;
+      const stamp = new Date().toISOString().slice(0,10);
+      const filename = `vremya-chudes_${stamp}.xlsx`;
+      const wbout = XLSX.write(wb, {bookType:'xlsx', type:'array'});
+      const blob = new Blob([wbout], {type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+      return {blob, filename};
     }
 
     function formatAddress(r){
