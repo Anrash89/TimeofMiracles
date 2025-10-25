@@ -8,12 +8,17 @@
     :root{
       --bg:#f7f4ff; --card:#fff; --accent:#7a5cff; --accent-2:#ff7ac6;
       --ink:#2b2b2b; --muted:#6b6b6b; --ring:0 8px 40px rgba(122,92,255,.15);
-      --chip:#f4f1ff; --chip-brd:#e6e0ff; --chip-on:#7a5cff; --chip-ink:#4b3ecf;
+      --chip:#f4f1ff; --chip-brd:#e6e0ff; --chip-ink:#4b3ecf;
     }
-    html,body{margin:0;background:
-      radial-gradient(1200px 600px at 10% -10%, #ffe8f6 0, transparent 60%),
-      radial-gradient(1000px 800px at 110% 10%, #e7e2ff 0, transparent 60%),
-      var(--bg); color:var(--ink); font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial;}
+    html,body{
+      margin:0;
+      background:
+        radial-gradient(1200px 600px at 10% -10%, #ffe8f6 0, transparent 60%),
+        radial-gradient(1000px 800px at 110% 10%, #e7e2ff 0, transparent 60%),
+        var(--bg);
+      color:var(--ink);
+      font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial;
+    }
     .wrap{max-width:1000px;margin:36px auto;padding:16px}
     .head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
     h1{margin:0;font-size:26px}
@@ -27,24 +32,26 @@
     .note{font-size:12px;color:var(--muted);margin-top:12px}
     .badge{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border-radius:999px;padding:8px 12px;font-size:13px;font-weight:700}
     .city{display:flex;align-items:center;gap:10px}
+    .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
     .btn{border:none;cursor:pointer}
+    .search{padding:10px 12px;border-radius:12px;border:1px solid #e6e0ff;background:#fff;min-width:220px}
     /* чекбоксы-«пилюли» */
     .chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-top:10px}
     .chip{position:relative}
     .chip input{position:absolute;inset:0;opacity:0;cursor:pointer}
     .chip .pill{
       display:flex;align-items:center;justify-content:space-between;gap:8px;
-      padding:10px 12px;border:1px solid var(--chip-brd);border-radius:999px;background:var(--chip);
+      padding:10px 12px;border:1px solid var(--chip-brd);border-radius:999px;background:#f7f5ff;
       font-size:14px;color:#3a3562;transition:.15s transform,.15s box-shadow,.15s background,.15s border;
     }
-    .chip .cnt{font-size:12px;padding:2px 8px;border-radius:999px;background:#fff;border:1px solid var(--chip-brd);color:#6b63a8}
+    .chip .cnt{font-size:12px;padding:2px 8px;border-radius:999px;background:#fff;border:1px solid #e6e0ff;color:#6b63a8}
     .chip input:checked + .pill{background:#efeaff;border-color:#d7cfff;box-shadow:0 2px 0 #e7defa inset}
     .chip input:checked + .pill .cnt{background:#fff;border-color:#d7cfff;color:var(--chip-ink)}
-    .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-    .search{padding:10px 12px;border-radius:12px;border:1px solid #e6e0ff;background:#fff;min-width:220px}
     .small{font-size:13px;color:#4f4a6b}
   </style>
-  <!-- библиотеку SheetJS грузим динамически в коде; тег здесь не обязателен -->
+
+  <!-- ЛОКАЛЬНО: положи xlsx.full.min.js рядом со stats.html -->
+  <script src="./xlsx.full.min.js"></script>
 </head>
 <body>
   <div class="wrap">
@@ -93,37 +100,19 @@
   </div>
 
   <script>
-    // ================== НАСТРОЙКА API ==================
+    // ====== НАСТРОЙКА API ======
     const API = 'https://script.google.com/macros/s/AKfycbwzAkTH7Jg5Ov9-oduX9c18voH3pGrs0ZWoTqIZEVXVfEZxuuZ7dlBNAVtSP5RC_VW2fQ/exec?action=stats&rows=1';
 
     // кеш данных
     let RAW_ROWS = [];
     let NORM_ROWS = [];
     let UNIQ_ROWS = [];
-    let VIEW_CACHE = null; // для рендеринга и чисел по городам
+    let VIEW_CACHE = null;
 
-    // ------------- безопасная подгрузка SheetJS -------------
-    async function ensureXlsx(){
-      if (window.XLSX) return;
-      // пробуем jsDelivr, затем unpkg
-      const urls = [
-        'https://cdn.jsdelivr.net/npm/xlsx@0.19.3/dist/xlsx.full.min.js',
-        'https://unpkg.com/xlsx@0.19.3/dist/xlsx.full.min.js'
-      ];
-      for (const url of urls){
-        try{
-          await new Promise((res,rej)=>{
-            const s = document.createElement('script');
-            s.src = url; s.async = true; s.onload = res; s.onerror = rej;
-            document.head.appendChild(s);
-          });
-          if (window.XLSX) return;
-        }catch(_){/* пробуем следующий */}
-      }
-      throw new Error('Не удалось загрузить библиотеку XLSX');
-    }
+    // Библиотека уже подключена локально тегом <script>, просто возвращаем resolved
+    function ensureXlsx(){ return Promise.resolve(); }
 
-    // ============== загрузка и построение статистики ==============
+    // ====== загрузка и подготовка ======
     async function loadStats(){
       const res = await fetch(API, {cache:'no-store'});
       const data = await res.json();
@@ -149,10 +138,9 @@
       buildCitiesChecklist(view.cities, view.byCity);
     }
 
-    // ------- пересчёт без дублей для карточек -------
+    // ====== пересчёт без дублей ======
     function recomputeFromRows(rows){
       const norm = rows.map(r => normalizeRow(r));
-
       const uniqMap = new Map();
       norm.forEach(r=>{
         const key = [r.City, r.District, r.Street, r.Apartment, r.Parent_Name, r.Phone].join('|').toLowerCase();
@@ -206,7 +194,7 @@
       };
     }
 
-    // --------- логика подарков ----------
+    // ====== расчёт подарков ======
     function giftsForRow(r){
       const mainUnusual = isMainGiftUnusual(r.Food_Restrictions, r.Food_Notes) ? 1 : 0;
       const sibs = siblingItems(r);
@@ -262,21 +250,19 @@
       });
     }
 
-    // --------- утилиты ----------
+    // ====== утилиты ======
     function normalizeRow(r){
       if (Array.isArray(r)) return {};
       const out = {};
-      Object.keys(r).forEach(k=>{
-        out[stdKey(k)] = r[k];
-      });
+      Object.keys(r).forEach(k=>{ out[stdKey(k)] = r[k]; });
       return out;
     }
     function stdKey(k){ return String(k).trim().replace(/\s+/g,'_').replace(/[^\w]/g,'_'); }
     function safe(v){ return (v==null) ? '' : String(v).trim(); }
     function setText(id,val){ document.getElementById(id).textContent = String(val); }
-    function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&gt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m])); }
+    function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m])); }
 
-    // --------- рендер ----------
+    // ====== рендер ======
     function render(data){
       const citySel = document.getElementById('citySel');
       const cities = data.cities.length ? data.cities : ['—'];
@@ -299,7 +285,7 @@
       setText('c_unusual', c.unusual);
     }
 
-    // --------- «симпатичный» список городов с поиском и числами ----------
+    // ====== «симпатичный» список городов ======
     function buildCitiesChecklist(cities, byCity){
       const box = document.getElementById('citiesChecklist');
       const makeChip = c => {
@@ -322,7 +308,7 @@
       });
     }
 
-    // --------- панель экспорта ----------
+    // ====== панель экспорта ======
     document.getElementById('openExport').addEventListener('click', ()=>{
       const p = document.getElementById('exportPanel');
       p.style.display = (p.style.display==='none' || !p.style.display) ? 'block' : 'none';
@@ -334,8 +320,8 @@
     document.getElementById('downloadXlsx').addEventListener('click', async ()=>{
       const btn = document.getElementById('downloadXlsx');
       try{
-        btn.disabled = true; btn.textContent = 'Готовим файл…';
-        await ensureXlsx(); // <- ключ: гарантируем наличие XLSX
+        btn.disabled = true; btn.textContent = 'Готовим файл...';
+        await ensureXlsx();
         const selected = Array.from(document.querySelectorAll('.cityCheck:checked')).map(cb => cb.value);
         if (!selected.length) { alert('Выберите хотя бы один город.'); return; }
         const wb = buildWorkbook(selected);
@@ -343,13 +329,13 @@
         XLSX.writeFile(wb, `vremya-chudes_${stamp}.xlsx`);
       }catch(err){
         console.error(err);
-        alert('Не удалось подготовить файл. Проверьте интернет/блокировки CDN.');
+        alert('Не удалось подготовить файл.');
       }finally{
         btn.disabled = false; btn.textContent = 'Скачать .xlsx';
       }
     });
 
-    // --------- построение XLSX ----------
+    // ====== построение XLSX ======
     function buildWorkbook(cities){
       if (!UNIQ_ROWS.length) {
         alert('Не удалось получить сырые строки для экспорта. Обновите страницу.');
@@ -403,6 +389,7 @@
 
       return wb;
     }
+
     function formatAddress(r){
       const parts = [safe(r.City), safe(r.District), safe(r.Street)];
       const apt = safe(r.Apartment);
