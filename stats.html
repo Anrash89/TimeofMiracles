@@ -6,13 +6,18 @@
   <title>Онлайн-статистика — Время Чудес</title>
   <style>
     :root{
-      --bg:#f7f4ff; --card:#fff; --accent:#7a5cff; --accent-2:#ff7ac6; --ink:#2b2b2b; --muted:#6b6b6b; --ring:0 8px 40px rgba(122,92,255,.15)
+      --bg:#f7f4ff; --card:#fff; --accent:#7a5cff; --accent-2:#ff7ac6;
+      --ink:#2b2b2b; --muted:#6b6b6b; --ring:0 8px 40px rgba(122,92,255,.15);
+      --chip:#f4f1ff; --chip-brd:#e6e0ff; --chip-on:#7a5cff; --chip-ink:#4b3ecf;
     }
-    html,body{margin:0;background:radial-gradient(1200px 600px at 10% -10%, #ffe8f6 0, transparent 60%), radial-gradient(1000px 800px at 110% 10%, #e7e2ff 0, transparent 60%), var(--bg); color:var(--ink); font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial;}
+    html,body{margin:0;background:
+      radial-gradient(1200px 600px at 10% -10%, #ffe8f6 0, transparent 60%),
+      radial-gradient(1000px 800px at 110% 10%, #e7e2ff 0, transparent 60%),
+      var(--bg); color:var(--ink); font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial;}
     .wrap{max-width:1000px;margin:36px auto;padding:16px}
     .head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
     h1{margin:0;font-size:26px}
-    select{padding:10px 12px;border-radius:12px;border:1px solid #e6e0ff;outline:none}
+    select{padding:10px 12px;border-radius:12px;border:1px solid #e6e0ff;outline:none;background:#fff}
     .grid{display:grid;gap:14px}
     @media (min-width:760px){ .grid{grid-template-columns:repeat(4,1fr);} }
     .card{background:var(--card);border-radius:18px;box-shadow:var(--ring);padding:16px 18px;position:relative;overflow:hidden}
@@ -20,13 +25,26 @@
     .num{font-size:28px;font-weight:800;margin-top:6px}
     .row{display:grid;gap:14px;margin-top:16px}
     .note{font-size:12px;color:var(--muted);margin-top:12px}
-    .badge{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border-radius:999px;padding:6px 10px;font-size:12px}
+    .badge{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border-radius:999px;padding:8px 12px;font-size:13px;font-weight:700}
     .city{display:flex;align-items:center;gap:10px}
-    button.badge{border:none;cursor:pointer}
+    .btn{border:none;cursor:pointer}
+    /* чекбоксы-«пилюли» */
+    .chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-top:10px}
+    .chip{position:relative}
+    .chip input{position:absolute;inset:0;opacity:0;cursor:pointer}
+    .chip .pill{
+      display:flex;align-items:center;justify-content:space-between;gap:8px;
+      padding:10px 12px;border:1px solid var(--chip-brd);border-radius:999px;background:var(--chip);
+      font-size:14px;color:#3a3562;transition:.15s transform,.15s box-shadow,.15s background,.15s border;
+    }
+    .chip .cnt{font-size:12px;padding:2px 8px;border-radius:999px;background:#fff;border:1px solid var(--chip-brd);color:#6b63a8}
+    .chip input:checked + .pill{background:#efeaff;border-color:#d7cfff;box-shadow:0 2px 0 #e7defa inset}
+    .chip input:checked + .pill .cnt{background:#fff;border-color:#d7cfff;color:var(--chip-ink)}
+    .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .search{padding:10px 12px;border-radius:12px;border:1px solid #e6e0ff;background:#fff;min-width:220px}
+    .small{font-size:13px;color:#4f4a6b}
   </style>
-
-  <!-- SheetJS для экспорта в .xlsx -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.19.3/dist/xlsx.full.min.js"></script>
+  <!-- библиотеку SheetJS грузим динамически в коде; тег здесь не обязателен -->
 </head>
 <body>
   <div class="wrap">
@@ -35,12 +53,10 @@
         <h1>Статистика</h1>
         <span class="badge" id="cityBadge">Город: —</span>
       </div>
-      <div style="display:flex;gap:10px;align-items:center">
-        <div>
-          <label style="font-size:13px;color:#4f4a6b;margin-right:8px">Город</label>
-          <select id="citySel"></select>
-        </div>
-        <button id="openExport" class="badge">Выгрузить списки</button>
+      <div class="toolbar">
+        <label class="small">Город</label>
+        <select id="citySel"></select>
+        <button id="openExport" class="badge btn">Выгрузить списки</button>
       </div>
     </div>
 
@@ -61,37 +77,57 @@
 
     <!-- Панель выбора городов для выгрузки -->
     <div id="exportPanel" class="card" style="display:none;margin-top:12px">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+      <div class="toolbar" style="justify-content:space-between">
         <div style="font-weight:700">Выберите города для выгрузки</div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <label style="font-size:13px"><input type="checkbox" id="checkAll" /> Выбрать все</label>
-          <button id="downloadXlsx" class="badge">Скачать .xlsx</button>
+        <div class="toolbar">
+          <input id="searchCity" class="search" type="text" placeholder="Поиск города..." />
+          <label class="small"><input type="checkbox" id="checkAll" /> Выбрать все</label>
+          <button id="downloadXlsx" class="badge btn">Скачать .xlsx</button>
         </div>
       </div>
-      <div id="citiesChecklist" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;margin-top:10px"></div>
-      <div class="note">Экспорт формирует по листу на каждый выбранный город. В строках — уникальные семьи (адреса). Поля: контакт, телефон, адрес, основной ребёнок, ограничения/пояснения, братья/сёстры, «всего детей / обычных / необычных».</div>
+      <div id="citiesChecklist" class="chips"></div>
+      <div class="note">Экспорт: по листу на каждый выбранный город. Строки = уникальные семьи (адреса). Поля: контакт, телефон, адрес, основной ребёнок, ограничения/пояснения, братья/сёстры, «всего детей / обычных / необычных».</div>
     </div>
 
     <div class="note">Страница скрытая, для организаторов. Обновляется при открытии (данные берутся из Google Таблицы).</div>
   </div>
 
   <script>
-    // ==========================================================
-    // НАСТРОЙКА API (проверь, что URL верный для твоего Apps Script)
-    // ==========================================================
+    // ================== НАСТРОЙКА API ==================
     const API = 'https://script.google.com/macros/s/AKfycbwzAkTH7Jg5Ov9-oduX9c18voH3pGrs0ZWoTqIZEVXVfEZxuuZ7dlBNAVtSP5RC_VW2fQ/exec?action=stats&rows=1';
 
-    // Кеш сырых данных для экспорта
+    // кеш данных
     let RAW_ROWS = [];
     let NORM_ROWS = [];
     let UNIQ_ROWS = [];
+    let VIEW_CACHE = null; // для рендеринга и чисел по городам
 
-    // ====== Загрузка и отрисовка ======
+    // ------------- безопасная подгрузка SheetJS -------------
+    async function ensureXlsx(){
+      if (window.XLSX) return;
+      // пробуем jsDelivr, затем unpkg
+      const urls = [
+        'https://cdn.jsdelivr.net/npm/xlsx@0.19.3/dist/xlsx.full.min.js',
+        'https://unpkg.com/xlsx@0.19.3/dist/xlsx.full.min.js'
+      ];
+      for (const url of urls){
+        try{
+          await new Promise((res,rej)=>{
+            const s = document.createElement('script');
+            s.src = url; s.async = true; s.onload = res; s.onerror = rej;
+            document.head.appendChild(s);
+          });
+          if (window.XLSX) return;
+        }catch(_){/* пробуем следующий */}
+      }
+      throw new Error('Не удалось загрузить библиотеку XLSX');
+    }
+
+    // ============== загрузка и построение статистики ==============
     async function loadStats(){
       const res = await fetch(API, {cache:'no-store'});
       const data = await res.json();
 
-      // Если сервер прислал rows — сохраним и подготовим уникальные семьи
       if (Array.isArray(data.rows)) {
         RAW_ROWS  = data.rows;
         NORM_ROWS = RAW_ROWS.map(r => normalizeRow(r));
@@ -107,13 +143,13 @@
         UNIQ_ROWS = [];
       }
 
-      // Статистику для виджетов считаем как раньше (без дублей)
       const view = Array.isArray(data.rows) ? recomputeFromRows(data.rows) : data;
+      VIEW_CACHE = view;
       render(view);
-      buildCitiesChecklist(view.cities);
+      buildCitiesChecklist(view.cities, view.byCity);
     }
 
-    // ====== Пересчёт без дублей на клиенте (если пришли сырые строки) ======
+    // ------- пересчёт без дублей для карточек -------
     function recomputeFromRows(rows){
       const norm = rows.map(r => normalizeRow(r));
 
@@ -140,7 +176,7 @@
         byCity[city].gifts   += gifts.count;
       });
 
-      const cities = Object.keys(byCity).sort();
+      const cities = Object.keys(byCity).sort((a,b)=>a.localeCompare(b,'ru'));
       const byCityOut = {};
       let totalChildren=0,totalUsual=0,totalUnusual=0,totalGifts=0;
       cities.forEach(c=>{
@@ -170,7 +206,7 @@
       };
     }
 
-    // Подсчёт подарков/необычных для строки
+    // --------- логика подарков ----------
     function giftsForRow(r){
       const mainUnusual = isMainGiftUnusual(r.Food_Restrictions, r.Food_Notes) ? 1 : 0;
       const sibs = siblingItems(r);
@@ -179,7 +215,6 @@
       const usual = Math.max(count - unusual, 0);
       return {count, unusual, usual};
     }
-
     function isMainGiftUnusual(foodRaw, notesRaw){
       const food = (foodRaw || '').toString().trim().toLowerCase();
       const notes = (notesRaw || '').toString().trim().toLowerCase();
@@ -189,7 +224,6 @@
       if (food && food !== 'нет пищевых ограничений') return true;
       return !!notes;
     }
-
     function siblingItems(r){
       const t = (r.Siblings_Text || '').toString();
       const j = (r.Siblings_JSON || '').toString();
@@ -212,7 +246,6 @@
       }
       return [];
     }
-
     function parseSiblingText(raw){
       const normalized = raw
         .replace(/•/g, '\n')
@@ -229,6 +262,7 @@
       });
     }
 
+    // --------- утилиты ----------
     function normalizeRow(r){
       if (Array.isArray(r)) return {};
       const out = {};
@@ -237,12 +271,12 @@
       });
       return out;
     }
-    function stdKey(k){
-      return String(k).trim().replace(/\s+/g,'_').replace(/[^\w]/g,'_');
-    }
+    function stdKey(k){ return String(k).trim().replace(/\s+/g,'_').replace(/[^\w]/g,'_'); }
     function safe(v){ return (v==null) ? '' : String(v).trim(); }
+    function setText(id,val){ document.getElementById(id).textContent = String(val); }
+    function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&gt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m])); }
 
-    // ====== Рендер ======
+    // --------- рендер ----------
     function render(data){
       const citySel = document.getElementById('citySel');
       const cities = data.cities.length ? data.cities : ['—'];
@@ -256,7 +290,6 @@
       setText('g_unusual', data.totals.unusual);
       citySel.addEventListener('change', ()=> showCity(citySel.value, data));
     }
-
     function showCity(city, data){
       document.getElementById('cityBadge').textContent = 'Город: ' + city;
       const c = data.byCity[city] || {children:0, addresses:0, usual:0, unusual:0};
@@ -266,44 +299,57 @@
       setText('c_unusual', c.unusual);
     }
 
-    function setText(id,val){ document.getElementById(id).textContent = String(val); }
-
-    // ====== Панель экспорта ======
-    function buildCitiesChecklist(cities) {
+    // --------- «симпатичный» список городов с поиском и числами ----------
+    function buildCitiesChecklist(cities, byCity){
       const box = document.getElementById('citiesChecklist');
-      box.innerHTML = cities.map(c => (
-        `<label style="display:flex;gap:8px;align-items:center;font-size:14px">
-           <input type="checkbox" class="cityCheck" value="${escapeHtml(c)}" />
-           <span>${escapeHtml(c)}</span>
-         </label>`
-      )).join('');
+      const makeChip = c => {
+        const cnt = (byCity[c]?.children ?? 0);
+        return `<label class="chip">
+          <input type="checkbox" class="cityCheck" value="${escapeHtml(c)}">
+          <div class="pill"><span>${escapeHtml(c)}</span><span class="cnt" title="детей в городе">${cnt}</span></div>
+        </label>`;
+      };
+      box.innerHTML = cities.map(makeChip).join('');
+
+      // поиск
+      const search = document.getElementById('searchCity');
+      search.addEventListener('input', ()=>{
+        const q = search.value.trim().toLowerCase();
+        box.querySelectorAll('.chip').forEach(lbl=>{
+          const name = lbl.textContent.toLowerCase();
+          lbl.style.display = name.includes(q) ? '' : 'none';
+        });
+      });
     }
 
-    function escapeHtml(s){
-      return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
-    }
-
+    // --------- панель экспорта ----------
     document.getElementById('openExport').addEventListener('click', ()=>{
       const p = document.getElementById('exportPanel');
       p.style.display = (p.style.display==='none' || !p.style.display) ? 'block' : 'none';
     });
-
     document.getElementById('checkAll').addEventListener('change', (e)=>{
-      document.querySelectorAll('.cityCheck').forEach(cb => cb.checked = e.target.checked);
+      document.querySelectorAll('.cityCheck').forEach(cb => { if (cb.offsetParent!==null) cb.checked = e.target.checked; });
     });
 
-    document.getElementById('downloadXlsx').addEventListener('click', ()=>{
-      const selected = Array.from(document.querySelectorAll('.cityCheck:checked')).map(cb => cb.value);
-      if (!selected.length) {
-        alert('Выберите хотя бы один город.');
-        return;
+    document.getElementById('downloadXlsx').addEventListener('click', async ()=>{
+      const btn = document.getElementById('downloadXlsx');
+      try{
+        btn.disabled = true; btn.textContent = 'Готовим файл…';
+        await ensureXlsx(); // <- ключ: гарантируем наличие XLSX
+        const selected = Array.from(document.querySelectorAll('.cityCheck:checked')).map(cb => cb.value);
+        if (!selected.length) { alert('Выберите хотя бы один город.'); return; }
+        const wb = buildWorkbook(selected);
+        const stamp = new Date().toISOString().slice(0,10);
+        XLSX.writeFile(wb, `vremya-chudes_${stamp}.xlsx`);
+      }catch(err){
+        console.error(err);
+        alert('Не удалось подготовить файл. Проверьте интернет/блокировки CDN.');
+      }finally{
+        btn.disabled = false; btn.textContent = 'Скачать .xlsx';
       }
-      const wb = buildWorkbook(selected);
-      const stamp = new Date().toISOString().slice(0,10);
-      XLSX.writeFile(wb, `vremya-chudes_${stamp}.xlsx`);
     });
 
-    // ====== Построение XLSX ======
+    // --------- построение XLSX ----------
     function buildWorkbook(cities){
       if (!UNIQ_ROWS.length) {
         alert('Не удалось получить сырые строки для экспорта. Обновите страницу.');
@@ -332,13 +378,13 @@
             'Необычных'                 : gifts.unusual
           };
         });
-
         const ws = XLSX.utils.json_to_sheet(sheetData, {cellDates:false});
         autoSizeColumns(ws, sheetData);
         const name = sanitizeSheetName(city);
         XLSX.utils.book_append_sheet(wb, ws, name);
       });
 
+      // лист «Сводка» по выбранным
       const summary = cities.map(c => {
         const rows = UNIQ_ROWS.filter(r => (r.City||'').toString() === c);
         let total=0, usual=0, unusual=0, addrSet=new Set();
@@ -349,13 +395,7 @@
           unusual+= g.unusual;
           addrSet.add(([r.City, r.District, r.Street, r.Apartment].join('|')).toLowerCase());
         });
-        return {
-          'Город'      : c,
-          'Детей всего': total,
-          'Адресов'    : addrSet.size,
-          'Обычных'    : usual,
-          'Необычных'  : unusual
-        };
+        return {'Город':c,'Детей всего':total,'Адресов':addrSet.size,'Обычных':usual,'Необычных':unusual};
       });
       const wsSum = XLSX.utils.json_to_sheet(summary);
       autoSizeColumns(wsSum, summary);
@@ -363,32 +403,26 @@
 
       return wb;
     }
-
     function formatAddress(r){
       const parts = [safe(r.City), safe(r.District), safe(r.Street)];
       const apt = safe(r.Apartment);
       const addr = parts.filter(Boolean).join(', ');
       return apt ? `${addr}, кв. ${apt}` : addr;
     }
-
     function autoSizeColumns(ws, data){
       const cols = Object.keys(data[0] || {});
       ws['!cols'] = cols.map(key=>{
-        const max = Math.max(
-          key.length,
-          ...data.map(row => String(row[key] ?? '').length)
-        );
+        const max = Math.max(key.length, ...data.map(row => String(row[key] ?? '').length));
         return {wch: Math.min(Math.max(max + 2, 12), 60)};
       });
     }
-
     function sanitizeSheetName(name){
       let n = String(name).replace(/[:\\/?*\[\]]/g,' ').trim();
       if (n.length > 31) n = n.slice(0,31);
       return n || 'Лист';
     }
 
-    // Старт
+    // старт
     loadStats();
   </script>
 </body>
