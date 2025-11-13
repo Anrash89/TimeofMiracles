@@ -68,7 +68,6 @@
       <h1>Заявка для ребёнка <span class="badge">благотворительность</span></h1>
       <p class="lead">Пожалуйста, сначала выберите город — мы проверим, открыт ли набор в нём ❤️</p>
 
-      <!-- ШАГ 0 -->
       <div id="cityStep">
         <div class="center" style="margin:6px 0 10px">
           <label for="cityChooser" style="font-weight:700">Город</label>
@@ -85,10 +84,8 @@
         <div class="divider"></div>
       </div>
 
-      <!-- скрытый iframe -->
       <iframe name="hidden_iframe" style="display:none;"></iframe>
 
-      <!-- ШАГ 1 — форма -->
       <form id="wishForm" class="hidden" action="https://script.google.com/macros/s/AKfycbwzAkTH7Jg5Ov9-oduX9c18voH3pGrs0ZWoTqIZEVXVfEZxuuZ7dlBNAVtSP5RC_VW2fQ/exec" method="POST" target="hidden_iframe">
         <input type="hidden" name="siblings_text" id="siblings_text" value=""/>
 
@@ -199,6 +196,17 @@
       "Кольцово","Казанка","Кинель (Алексеевка, Самарская обл.)","Кудряшовский","Большая Черниговка"
     ];
 
+    // === ИЗМЕНЕНИЕ 1: Список принудительно закрытых городов ===
+    const CLOSED_CITIES = [
+      "Екатеринбург",
+      "Тюмень",
+      "Томск",
+      "Челябинск",
+      "Пышма (ЕКБ область)", // Важно: название должно точно совпадать с CITIES
+      "Северск",
+      "Самара"
+    ];
+
     // Элементы шага выбора города
     const cityChooser = document.getElementById('cityChooser');
     const cityNote  = document.getElementById('cityNote');
@@ -224,15 +232,29 @@
       return statsCache;
     }
 
+    // === ИЗМЕНЕНИЕ 2: Обновленная функция проверки города ===
     async function checkCity(){
       cityLock.classList.add('hidden');
       cityOk.classList.add('hidden');
       goBtn.disabled = true;
+      cityNote.textContent = 'Проверяем статус города...';
+      const city = cityChooser.value;
+
+      // --- Новая проверка: сначала смотрим список CLOSED_CITIES ---
+      if (CLOSED_CITIES.includes(city)) {
+        cityNote.textContent = '';
+        cityLock.classList.remove('hidden'); // Показываем сообщение "К сожалению, набор... завершён"
+        goBtn.disabled = true;              // Блокируем кнопку
+        return; // Выходим, дальнейшие проверки по лимиту не нужны
+      }
+      // --- Конец новой проверки ---
+
+      // Если город НЕ в списке CLOSED_CITIES, продолжаем обычную проверку по лимиту
       cityNote.textContent = 'Считаем, сколько детей уже записались...';
       const data = await ensureStats();
-      const city = cityChooser.value;
       const rec = data.byCity && data.byCity[city] ? data.byCity[city] : {children:0};
       const takenChildren = Number(rec.children || 0); // <<< считаем ДЕТЕЙ
+      
       if (takenChildren >= CITY_LIMIT){
         cityNote.textContent = '';
         cityLock.classList.remove('hidden');
@@ -386,7 +408,3 @@
   </script>
 </body>
 </html>
-
-
-
-
